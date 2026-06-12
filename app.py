@@ -6,7 +6,7 @@ from src.retriever import get_retriever
 from src.llm import get_llm
 from src.rag_chain import build_rag_chain
 
-# 1. Load data
+# 1. Load resumes
 documents = load_resumes("data/resumes")
 
 # 2. Split into chunks
@@ -15,31 +15,61 @@ chunks = split_documents(documents)
 # 3. Embeddings
 embedding_model = get_embedding_model()
 
-# 4. Vector DB
+# 4. Vector store
 vector_store = create_vector_store(chunks, embedding_model)
 
-# 5. Retriever
+# 5. Retriever (MMR)
 retriever = get_retriever(vector_store)
 
 # 6. LLM
 llm = get_llm()
 
-# 7. Prompt ONLY
+# 7. Prompt
 prompt = build_rag_chain()
 
-# 8. Query
+# ----------------------------
+# QUERY
+# ----------------------------
 question = "Who has Linux experience?"
 
-# 9. Retrieve docs
+# 8. Retrieve docs
 docs = retriever.invoke(question)
 
-# 10. Build context (clean version)
+# ----------------------------
+# STEP: DEDUPLICATION (IMPORTANT FIX)
+# ----------------------------
+unique_docs = {}
+for doc in docs:
+    source = doc.metadata.get("source", "unknown")
+    if source not in unique_docs:
+        unique_docs[source] = doc
+
+docs = list(unique_docs.values())
+
+# ----------------------------
+# DEBUG: show retrieved resumes
+# ----------------------------
+print("\n--- UNIQUE RETRIEVED RESUMES ---")
+
+for i, doc in enumerate(docs):
+    print(f"\n[{i+1}] {doc.metadata.get('source')}")
+    print(doc.page_content[:250])
+
+# ----------------------------
+# BUILD CONTEXT
+# ----------------------------
 context = "\n\n".join(
-    f"Resume: {doc.metadata.get('source', 'unknown')}\n{doc.page_content}"
+    f"""
+Resume File: {doc.metadata.get('source', 'unknown')}
+Content:
+{doc.page_content}
+""".strip()
     for doc in docs
 )
 
-# 11. Prompt → LLM
+# ----------------------------
+# LLM INVOKE
+# ----------------------------
 messages = prompt.invoke({
     "context": context,
     "question": question
@@ -47,8 +77,5 @@ messages = prompt.invoke({
 
 response = llm.invoke(messages)
 
+print("\n--- FINAL ANSWER ---\n")
 print(response.content)
-print("\n--- RETRIEVED RESUMES ---")
-for i, doc in enumerate(docs):
-    print(f"\n[{i+1}] {doc.metadata.get('source')}")
-    print(doc.page_content[:200])
