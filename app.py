@@ -6,6 +6,7 @@ from src.retriever import get_retriever
 from src.llm import get_llm
 from src.rag_chain import build_rag_chain
 from src.reranker import rerank   # 🔥 NEW
+from src.qa_engine import ask_shortlisted_candidates
 
 # 1. Load data
 documents = load_resumes("data/resumes")
@@ -91,3 +92,19 @@ response = llm.invoke(messages)
 
 print("\n--- FINAL ATS RANKING ---\n")
 print(response.content)
+
+
+# shortlist top candidates
+shortlisted_docs = docs[:2]
+
+# ask question about shortlisted candidates
+qa_question = "Who has stronger Linux experience?"
+
+answer = ask_shortlisted_candidates(
+    qa_question,
+    shortlisted_docs,
+    llm
+)
+
+print("\n--- SHORTLIST Q&A ---\n")
+print(answer)
