@@ -1,12 +1,12 @@
-from src.pdf_loader import load_resume
+from src.resume_loader import load_resumes
 
-pdf_path = "data/resumes/60004873.pdf"
+folder_path = "data/resumes"
 
-documents = load_resume(pdf_path)
+documents = load_resumes(folder_path)
 
-print(f"Total Pages: {len(documents)}\n")
+print(f"Total Pages Loaded: {len(documents)}\n")
 
-for i, doc in enumerate(documents, start=1):
-    print(f"----- Page {i} -----")
-    print(doc.page_content)
-    print()
+for doc in documents:
+    print("Resume:", doc.metadata["source"])
+    print(doc.page_content[:200])
+    print("-" * 50)
