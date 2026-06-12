@@ -9,3 +9,12 @@ sentence-transformers
 chromadb
 langchain-google-genai
 python-dotenv
+
+# Backend
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Frontend
+streamlit
+requests
