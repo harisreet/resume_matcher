@@ -48,3 +48,7 @@ messages = prompt.invoke({
 response = llm.invoke(messages)
 
 print(response.content)
+print("\n--- RETRIEVED RESUMES ---")
+for i, doc in enumerate(docs):
+    print(f"\n[{i+1}] {doc.metadata.get('source')}")
+    print(doc.page_content[:200])
