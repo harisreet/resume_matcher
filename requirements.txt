@@ -7,3 +7,5 @@ pypdf
 
 sentence-transformers
 chromadb
+langchain-google-genai
+python-dotenv
