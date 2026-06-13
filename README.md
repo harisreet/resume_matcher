@@ -25,9 +25,12 @@ graph TD
     F --> J
     J --> K[Ranked ATS Score <br>& Explanations]
     
-    L[Recruiter Question] --> M[Candidate Q&A Engine]
-    I --> M
-    M --> N[Contextual Answer <br>with Sources]
+    L[Recruiter Question & Shortlist IDs] --> M[ChromaDB Pre-Filtering <br>source IN Shortlist IDs]
+    E --> M
+    M --> N[Retrieve Chunks <br>k=12]
+    N --> O[CrossEncoder Reranking <br>ms-marco-MiniLM-L-6-v2]
+    O --> P[Gemini 2.5 Flash <br>Q&A Synthesis Prompt]
+    P --> Q[Contextual Answer <br>with Document Sources]
 ```
 
 ---
@@ -47,16 +50,23 @@ graph TD
 
 ---
 
-## 🧠 Resume Scoring Methodology
+## 🧠 Architecture & Methodology
 
+### 1. Match & Candidate Scoring Pipeline
 To ensure maximum match accuracy and prevent model bias, our ranking pipeline uses a multi-tier logic:
-
-1.  **Extraction**: Extract high-fidelity text from PDFs.
+1.  **Extraction**: Extract high-fidelity text from PDFs using `PyPDFLoader`.
 2.  **Chunking**: Break text into overlapping chunks of 500 characters to keep context intact.
 3.  **Vector Retrieval**: Create semantic vectors via HuggingFace's `all-MiniLM-L6-v2`. Run Maximal Marginal Relevance (MMR) search to fetch candidate profiles that are both highly relevant and diverse.
 4.  **Reranking**: Rescore the retrieved documents using the `ms-marco-MiniLM-L-6-v2` CrossEncoder model to evaluate exact query-document relevance.
 5.  **Deduplication**: Group chunks back to their parent resume files.
 6.  **LLM Scoring & Evidence Synthesis**: Contextualize the shortlisted resumes inside a structured prompt and invoke Gemini 2.5 Flash to generate structured JSON containing ratings, matched skills, missing skills, and evidence.
+
+### 2. Shortlisted Candidate Q&A Pipeline (Full RAG)
+To query the system about specific candidates without mixing up credentials or profiles:
+1.  **Metadata Pre-Filtering**: The query is isolated in ChromaDB using a metadata filter on the unique candidate source files (e.g. `{"source": {"$in": ["candidate1.pdf", "candidate2.pdf"]}}`).
+2.  **Semantic Search**: ChromaDB performs a similarity search inside this candidate-specific partition to fetch the top `12` most matching chunks.
+3.  **CrossEncoder Reranking**: The retrieved chunks are reranked using the CrossEncoder model, prioritizing the most contextually relevant information first.
+4.  **Contextual Synthesis**: Gemini 2.5 Flash synthesizes the final answer using strictly the reranked chunks and outputs document sources.
 
 ---
 
