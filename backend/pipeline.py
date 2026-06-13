@@ -285,10 +285,10 @@ def run_qa(question: str, shortlisted_files: List[str]) -> dict:
         filter_dict = {"source": {"$in": shortlisted_files}}
 
     # Retrieve relevant chunks from ChromaDB using metadata filter
-    # k can be set to 10 to ensure we get plenty of context from the selected resumes
+    # k can be set to 12 to ensure we get plenty of context from the selected resumes
     retrieved_docs = vector_store.similarity_search(
         question,
-        k=10,
+        k=12,
         filter=filter_dict
     )
 
@@ -298,13 +298,16 @@ def run_qa(question: str, shortlisted_files: List[str]) -> dict:
             "sources": [],
         }
 
-    # Build context from the retrieved chunks
-    context = _build_context(retrieved_docs)
+    # Rerank retrieved chunks with CrossEncoder to sort the most semantically relevant chunks first
+    reranked_docs = _rerank_docs(question, retrieved_docs)
+
+    # Build context from the reranked chunks
+    context = _build_context(reranked_docs)
     llm = _get_llm()
     messages = QA_PROMPT.invoke({"context": context, "question": question})
     response = llm.invoke(messages)
 
     return {
         "answer": response.content,
-        "sources": list({d.metadata.get("source") for d in retrieved_docs}),
+        "sources": list({d.metadata.get("source") for d in reranked_docs}),
     }
